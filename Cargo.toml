@@ -1,0 +1,11 @@
+[package]
+name = "cargo-lock-align"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+cargo_metadata = "0.23"
+clap = { version = "4", features = ["derive"] }
+semver = "1"
+toml = "0.9"
