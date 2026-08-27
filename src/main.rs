@@ -1,7 +1,5 @@
-use anyhow::{bail, Context, Result};
-use cargo_metadata::{
-    CargoOpt, DependencyKind, Metadata, MetadataCommand, PackageId,
-};
+use anyhow::{Context, Result, bail};
+use cargo_metadata::{CargoOpt, DependencyKind, Metadata, MetadataCommand, PackageId};
 use clap::Parser;
 use semver::Version;
 use std::{
@@ -96,10 +94,7 @@ fn main() -> Result<()> {
 
     let old_packages = load_old_lock(&args.old_lock)?;
 
-    println!(
-        "Loaded {} packages from old lockfile",
-        old_packages.len()
-    );
+    println!("Loaded {} packages from old lockfile", old_packages.len());
 
     let mut aligned: HashSet<ResolvedPackageKey> = HashSet::new();
     let mut skipped: HashSet<ResolvedPackageKey> = HashSet::new();
@@ -119,8 +114,8 @@ fn main() -> Result<()> {
 
         let package_map = build_new_package_map(&metadata);
 
-        let new_lock_packages = load_current_lock_for_manifest(&args.manifest_path)
-            .unwrap_or_else(|err| {
+        let new_lock_packages =
+            load_current_lock_for_manifest(&args.manifest_path).unwrap_or_else(|err| {
                 eprintln!("warning: failed to load current Cargo.lock: {err}");
                 Vec::new()
             });
@@ -174,15 +169,15 @@ fn main() -> Result<()> {
         println!(
             "  PIN  {} {} -> {}",
             candidate.resolved_key.package.name,
-                candidate.current_display(),
-                candidate.target_display()
+            candidate.current_display(),
+            candidate.target_display()
         );
 
         cargo_update_precise(
             &args.manifest_path,
             &candidate.resolved_key.package,
             &candidate.new_version,
-                &candidate.target_precise,
+            &candidate.target_precise,
         )?;
 
         pass += 1;
@@ -259,13 +254,9 @@ fn collect_candidates(
             name: new_pkg.name.clone(),
             source: new_pkg.source.clone(),
         };
-        let new_precise = find_old_package(
-            new_lock_packages,
-            &key,
-            &new_pkg.version,
-        )
-        .and_then(|pkg| pkg.precise.clone())
-        .or_else(|| new_pkg.precise.clone());
+        let new_precise = find_old_package(new_lock_packages, &key, &new_pkg.version)
+            .and_then(|pkg| pkg.precise.clone())
+            .or_else(|| new_pkg.precise.clone());
         let resolved_key = ResolvedPackageKey {
             package: key.clone(),
             version: new_pkg.version.clone(),
@@ -295,42 +286,29 @@ fn collect_candidates(
             continue;
         }
 
-        let Some(old_pkg) =
-            find_old_package(old_packages, &key, &new_pkg.version)
-        else {
-                if has_package_with_matching_source(old_packages, &key) {
+        let Some(old_pkg) = find_old_package(old_packages, &key, &new_pkg.version) else {
+            if has_package_with_matching_source(old_packages, &key) {
                 println!(
                     "  SKIP {:<30} new={} (no compatible version in old lock)",
                     key.name,
-                    display_package_version(
-                        &new_pkg.version,
-                        new_precise.as_deref(),
-                    )
+                    display_package_version(&new_pkg.version, new_precise.as_deref(),)
                 );
             } else {
                 println!(
                     "  SKIP {:<30} new={} (not found in old lock)",
                     key.name,
-                    display_package_version(
-                        &new_pkg.version,
-                        new_precise.as_deref(),
-                    )
+                    display_package_version(&new_pkg.version, new_precise.as_deref(),)
                 );
             }
             skipped.insert(resolved_key);
             continue;
         };
 
-        if old_pkg.version == new_pkg.version
-            && old_pkg.precise == new_pkg.precise
-        {
+        if old_pkg.version == new_pkg.version && old_pkg.precise == new_pkg.precise {
             println!(
                 "  OK   {:<30} {}",
                 key.name,
-                display_package_version(
-                    &new_pkg.version,
-                    new_precise.as_deref(),
-                )
+                display_package_version(&new_pkg.version, new_precise.as_deref(),)
             );
 
             aligned.insert(resolved_key);
@@ -368,8 +346,7 @@ fn enqueue_dependencies(
     parent_depth: usize,
     args: &Args,
 ) {
-    let Some(node) = resolve.nodes.iter().find(|node| node.id == *package_id)
-    else {
+    let Some(node) = resolve.nodes.iter().find(|node| node.id == *package_id) else {
         return;
     };
 
@@ -391,10 +368,8 @@ fn order_candidates<'a>(
         .collect();
 
     let mut adjacency: HashMap<String, Vec<String>> = HashMap::new();
-    let mut incoming_count: HashMap<String, usize> = candidates_by_id
-        .keys()
-        .map(|id| (id.clone(), 0))
-        .collect();
+    let mut incoming_count: HashMap<String, usize> =
+        candidates_by_id.keys().map(|id| (id.clone(), 0)).collect();
 
     for candidate in candidates.values() {
         let id = candidate.package_id.to_string();
@@ -471,11 +446,11 @@ fn order_candidates<'a>(
 }
 
 fn load_old_lock(path: &Path) -> Result<Vec<OldPackage>> {
-    let text = fs::read_to_string(path)
-        .with_context(|| format!("failed to read {}", path.display()))?;
+    let text =
+        fs::read_to_string(path).with_context(|| format!("failed to read {}", path.display()))?;
 
-    let root: Value = toml::from_str(&text)
-        .with_context(|| format!("failed to parse {}", path.display()))?;
+    let root: Value =
+        toml::from_str(&text).with_context(|| format!("failed to parse {}", path.display()))?;
 
     let packages = root
         .get("package")
@@ -485,9 +460,7 @@ fn load_old_lock(path: &Path) -> Result<Vec<OldPackage>> {
     let mut result = Vec::new();
 
     for package in packages {
-        let table = package
-            .as_table()
-            .context("invalid [[package]] entry")?;
+        let table = package.as_table().context("invalid [[package]] entry")?;
 
         let name = table
             .get("name")
@@ -547,18 +520,12 @@ fn find_old_package<'a>(
         .iter()
         .filter(|pkg| {
             package_source_matches(&pkg.key, key)
-                && same_semver_compatibility_line(
-                    &pkg.version,
-                    current_version,
-                )
+                && same_semver_compatibility_line(&pkg.version, current_version)
         })
         .max_by(|a, b| a.version.cmp(&b.version))
 }
 
-fn has_package_with_matching_source(
-    packages: &[OldPackage],
-    key: &PackageKey,
-) -> bool {
+fn has_package_with_matching_source(packages: &[OldPackage], key: &PackageKey) -> bool {
     packages
         .iter()
         .any(|pkg| package_source_matches(&pkg.key, key))
@@ -580,21 +547,14 @@ fn package_source_matches(old_key: &PackageKey, new_key: &PackageKey) -> bool {
      * same package from the registry. Treat that as a version-alignment match
      * for registry packages only.
      */
-    old_key.source.is_none()
-        && new_key
-            .source
-            .as_deref()
-            .is_some_and(is_registry_source)
+    old_key.source.is_none() && new_key.source.as_deref().is_some_and(is_registry_source)
 }
 
 fn is_registry_source(source: &str) -> bool {
     source.starts_with("registry+")
 }
 
-fn same_semver_compatibility_line(
-    old_version: &Version,
-    current_version: &Version,
-) -> bool {
+fn same_semver_compatibility_line(old_version: &Version, current_version: &Version) -> bool {
     if old_version.major != current_version.major {
         return false;
     }
@@ -625,9 +585,10 @@ fn build_new_package_map(metadata: &Metadata) -> HashMap<PackageId, NewPackage> 
                     id: pkg.id.clone(),
                     name: pkg.name.to_string(),
                     version: pkg.version.clone(),
-                    source: pkg.source.as_ref().map(|s| {
-                        normalize_source_for_key(s.repr.as_str())
-                    }),
+                    source: pkg
+                        .source
+                        .as_ref()
+                        .map(|s| normalize_source_for_key(s.repr.as_str())),
                     precise: pkg
                         .source
                         .as_ref()
@@ -651,10 +612,7 @@ fn workspace_roots(metadata: &Metadata) -> Vec<PackageId> {
     metadata.workspace_members.clone()
 }
 
-fn should_process_dep(
-    kinds: &[cargo_metadata::DepKindInfo],
-    args: &Args,
-) -> bool {
+fn should_process_dep(kinds: &[cargo_metadata::DepKindInfo], args: &Args) -> bool {
     if kinds.is_empty() {
         return true;
     }
@@ -684,9 +642,7 @@ fn cargo_metadata(args: &Args) -> Result<Metadata> {
         command.features(CargoOpt::SomeFeatures(args.features.clone()));
     }
 
-    let metadata = command
-        .exec()
-        .context("cargo metadata failed")?;
+    let metadata = command.exec().context("cargo metadata failed")?;
 
     Ok(metadata)
 }
@@ -715,19 +671,10 @@ fn cargo_update_precise(
         .arg("--precise")
         .arg(target_precise)
         .status()
-        .with_context(|| {
-            format!(
-                "failed to execute cargo update for {}",
-                key.name
-            )
-        })?;
+        .with_context(|| format!("failed to execute cargo update for {}", key.name))?;
 
     if !status.success() {
-        bail!(
-            "cargo update failed for {} -> {}",
-            key.name,
-            target_precise
-        );
+        bail!("cargo update failed for {} -> {}", key.name, target_precise);
     }
 
     Ok(())
@@ -756,10 +703,9 @@ fn percent_decode(value: &str) -> String {
 
     while index < bytes.len() {
         if bytes[index] == b'%' && index + 2 < bytes.len() {
-            if let (Some(high), Some(low)) = (
-                hex_value(bytes[index + 1]),
-                hex_value(bytes[index + 2]),
-            ) {
+            if let (Some(high), Some(low)) =
+                (hex_value(bytes[index + 1]), hex_value(bytes[index + 2]))
+            {
                 decoded.push((high * 16 + low) as char);
                 index += 3;
                 continue;
@@ -793,10 +739,7 @@ fn short_precise(precise: &str) -> &str {
     precise.get(..8).unwrap_or(precise)
 }
 
-fn package_spec_for_current_version(
-    key: &PackageKey,
-    current_version: &Version,
-) -> String {
+fn package_spec_for_current_version(key: &PackageKey, current_version: &Version) -> String {
     format!("{}@{}", key.name, current_version)
 }
 
@@ -812,10 +755,7 @@ mod tests {
         OldPackage {
             key: PackageKey {
                 name: name.to_string(),
-                source: Some(
-                    "registry+https://github.com/rust-lang/crates.io-index"
-                        .to_string(),
-                ),
+                source: Some("registry+https://github.com/rust-lang/crates.io-index".to_string()),
             },
             version: self::version(version),
             precise: None,
@@ -831,14 +771,10 @@ mod tests {
         ];
         let key = PackageKey {
             name: "proc-macro2".to_string(),
-            source: Some(
-                "registry+https://github.com/rust-lang/crates.io-index"
-                    .to_string(),
-            ),
+            source: Some("registry+https://github.com/rust-lang/crates.io-index".to_string()),
         };
 
-        let old = find_old_package(&packages, &key, &version("1.0.107"))
-            .unwrap();
+        let old = find_old_package(&packages, &key, &version("1.0.107")).unwrap();
 
         assert_eq!(old.version, version("1.0.95"));
     }
@@ -859,10 +795,7 @@ mod tests {
     fn package_spec_uses_current_version() {
         let key = PackageKey {
             name: "extend".to_string(),
-            source: Some(
-                "registry+https://github.com/rust-lang/crates.io-index"
-                    .to_string(),
-            ),
+            source: Some("registry+https://github.com/rust-lang/crates.io-index".to_string()),
         };
 
         assert_eq!(
@@ -873,15 +806,10 @@ mod tests {
 
     #[test]
     fn normalizes_git_source_for_matching_but_keeps_precise_rev() {
-        let old =
-            "git+ssh://code.byted.org/lark/molten-ffi.git?branch=v/0.14.x#090efe06";
-        let new =
-            "git+ssh://code.byted.org/lark/molten-ffi.git?branch=v%2F0.14.x#87226568";
+        let old = "git+ssh://code.byted.org/lark/molten-ffi.git?branch=v/0.14.x#090efe06";
+        let new = "git+ssh://code.byted.org/lark/molten-ffi.git?branch=v%2F0.14.x#87226568";
 
-        assert_eq!(
-            normalize_source_for_key(old),
-            normalize_source_for_key(new),
-        );
+        assert_eq!(normalize_source_for_key(old), normalize_source_for_key(new),);
         assert_eq!(source_precise(old).as_deref(), Some("090efe06"));
     }
 
@@ -893,10 +821,7 @@ mod tests {
         };
         let new = PackageKey {
             name: "backtrace".to_string(),
-            source: Some(
-                "registry+https://github.com/rust-lang/crates.io-index"
-                    .to_string(),
-            ),
+            source: Some("registry+https://github.com/rust-lang/crates.io-index".to_string()),
         };
 
         assert!(package_source_matches(&old, &new));
@@ -911,8 +836,7 @@ mod tests {
         let new = PackageKey {
             name: "molten-ffi".to_string(),
             source: Some(
-                "git+ssh://code.byted.org/lark/molten-ffi.git?branch=v/0.14.x"
-                    .to_string(),
+                "git+ssh://code.byted.org/lark/molten-ffi.git?branch=v/0.14.x".to_string(),
             ),
         };
 

@@ -1,3 +1,7 @@
+你是一只苦哈哈的牛马，你从公司巨大项目的 monorepo 中抽取了一个 crate 到独立仓库。但是你们使用的编译器版本极其古典，导致独立仓库根本编译不了。你需要对照原来 workspace 的 Cargo.lock，把独立仓库的依赖版本对齐到旧版本。这个过程漫长又痛苦，你红温了，于是你写了一个小工具，叫做 `cargo-lock-align`。
+
+除了上面这句话，整个仓库都是 AI 写的。
+
 # cargo-lock-align
 
 `cargo-lock-align` 是一个用于对齐 Rust 项目 `Cargo.lock` 依赖版本的命令行工具。
@@ -271,4 +275,4 @@ Packages to align:
 
 ## License
 
-请在发布前根据项目实际情况补充许可证信息。
+本项目使用 `MIT OR Apache-2.0` 双许可证。
