@@ -1,6 +1,6 @@
 [package]
 name = "cargo-lock-align"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 authors = ["harkerhand <harkerhand@outlook.com>"]
 description = "Align a Rust project's Cargo.lock dependency versions with an existing lockfile."
